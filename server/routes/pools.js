@@ -1,15 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { createPool, getAllActivePools, joinPool } = require('../controllers/poolcontroller');
-const { protect } = require('../middleware/authmiddleware');
+const { createPool, getAllActivePools, joinPool, finalizePool } = require('../controllers/poolcontroller');
+const { protect } = require('../middleware/authMiddleware');
 
-// POST   /api/pools/      (Create a new pool)
 router.post('/', protect, createPool);
-
-// GET    /api/pools/      (Get all active pools)
 router.get('/', protect, getAllActivePools);
-
-// PUT    /api/pools/join/:id  (Join a pool)
 router.put('/join/:id', protect, joinPool);
+router.put('/finalize/:id', protect, finalizePool);
 
 module.exports = router;

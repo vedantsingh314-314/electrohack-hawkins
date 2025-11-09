@@ -1,22 +1,18 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 
-// Pages
+// Use correct casing as per the project file structure
 import Login from './pages/Login.jsx';
 import Home from './pages/Home.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import CreatePool from './pages/CreatePool.jsx';
-
-// Layout
 import Layout from './components/Layout.jsx';
 
 function App() {
   return (
     <Routes>
-      {/* Public Route */}
       <Route path="/login" element={<Login />} />
 
-      {/* Protected Layout Routes */}
       <Route
         path="/"
         element={
@@ -25,6 +21,7 @@ function App() {
           </Layout>
         }
       />
+      
       <Route
         path="/create-pool/:type"
         element={
@@ -33,6 +30,7 @@ function App() {
           </Layout>
         }
       />
+
       <Route
         path="/join-pools/:type"
         element={

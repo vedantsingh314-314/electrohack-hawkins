@@ -4,12 +4,12 @@ const PoolSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    ref: 'User', // This links it to our User model
+    ref: 'User',
   },
   type: {
     type: String,
     required: true,
-    enum: ['Ride', 'Food'], // Only allows these two values
+    enum: ['Ride', 'Food'],
   },
   destination: {
     type: String,
@@ -26,26 +26,34 @@ const PoolSchema = new mongoose.Schema({
   members: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User', // A list of users who joined
+      ref: 'User',
     },
   ],
   maxSize: {
     type: Number,
-    default: 5, // Your 5-person limit
+    default: 5,
   },
   status: {
     type: String,
     default: 'Active',
-    enum: ['Active', 'Full', 'Expired', 'Cancelled'],
+    enum: ['Active', 'Full', 'Expired', 'Cancelled', 'Finalized'],
   },
   expiresAt: {
     type: Date,
-    default: null, // It's 'null' for "Book Later" pools
+    default: null,
   },
   poolMode: {
     type: String,
     enum: ['now', 'later'],
     required: true,
+  },
+  baseCost: {
+    type: Number,
+    default: 0,
+  },
+  splitCost: {
+    type: Number,
+    default: 0,
   },
 }, { timestamps: true });
 

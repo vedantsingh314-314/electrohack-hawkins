@@ -1,13 +1,9 @@
-const Pool = require('../models/pool');
-const User = require('../models/user');
+const Pool = require('../models/Pool');
+const User = require('../models/User');
 
 // --- 1. CREATE A NEW POOL ---
-// --- 1. CREATE A NEW POOL (DEBUG MODE) ---
 exports.createPool = async (req, res) => {
   try {
-    console.log('[CREATE POOL] Received request body:', req.body);
-    
-    // 'poolMode' will be 'now' or 'later'
     const { type, destination, meetUpPoint, time, poolMode } = req.body;
     const createdBy = req.user._id;
 
@@ -17,48 +13,37 @@ exports.createPool = async (req, res) => {
       meetUpPoint,
       createdBy,
       members: [createdBy],
-      poolMode: poolMode, // We save the mode
+      poolMode: poolMode,
     };
 
     if (poolMode === 'now') {
-      console.log('[CREATE POOL] Mode is "now". Setting times...');
-      poolData.time = new Date(Date.now() + 10 * 60 * 1000); // Ride in 10 mins
-      poolData.expiresAt = new Date(Date.now() + 5 * 60 * 1000); // Joining window is 5 mins
+      poolData.time = new Date(Date.now() + 10 * 60 * 1000); 
+      poolData.expiresAt = new Date(Date.now() + 5 * 60 * 1000); 
     } else {
-      console.log('[CREATE POOL] Mode is "later". Setting times...');
       poolData.time = time;
-      // Joining window is valid until 5 mins AFTER the scheduled ride
       poolData.expiresAt = new Date(new Date(time).getTime() + 5 * 60 * 1000);
     }
-    
-    console.log('[CREATE POOL] Creating pool in database with this data:', poolData);
-    const pool = await Pool.create(poolData);
-    console.log('[CREATE POOL] Pool created successfully!');
 
-    // Give the creator 10 eco-points
+    const pool = await Pool.create(poolData);
     await User.findByIdAndUpdate(createdBy, { $inc: { ecoPoints: 10 } });
-    console.log('[CREATE POOL] Eco-points updated!');
 
     res.status(201).json(pool);
 
   } catch (error) {
-    // --- THIS IS THE IMPORTANT PART ---
     console.error('--- CREATE POOL CRASHED ---');
-    console.error('The "Pool.create()" command failed. This is the error:');
-    console.error(error); 
-    // --- END ---
+    console.error('The "Pool.create()" command failed. This is the error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// --- 2. GET ALL ACTIVE POOLS ---
+// --- 2. GET ALL ACTIVE POOLS (Includes Lazy Cron Job) ---
 exports.getAllActivePools = async (req, res) => {
   try {
     const now = new Date();
     
-    // --- START OF THE "LAZY CRON JOB" ---
+    // FIX: Only check pools that are currently 'Active' to prevent re-processing 'Finalized' ones.
     const expiredPools = await Pool.find({
-      status: 'Active',
+      status: 'Active', 
       expiresAt: { $lt: now },
     });
 
@@ -66,15 +51,16 @@ exports.getAllActivePools = async (req, res) => {
       if (pool.poolMode === 'now' && pool.members.length < 2) {
         pool.status = 'Expired';
         await pool.save();
-      } else if (pool.poolMode === 'later') {
+      } 
+      else if (pool.poolMode === 'later') {
         pool.status = 'Expired';
         await pool.save();
       }
     }
-    // --- END OF THE "LAZY CRON JOB" ---
 
+    // FIX: Fetch only 'Active' or 'Full' pools. 'Finalized' pools are now permanently hidden.
     const pools = await Pool.find({ 
-      status: 'Active',
+      status: { $in: ['Active', 'Full'] }, 
       time: { $gte: now } 
     })
     .populate('createdBy', 'email')
@@ -84,11 +70,12 @@ exports.getAllActivePools = async (req, res) => {
     res.status(200).json(pools);
 
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('GET ALL ACTIVE POOLS CRASHED:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// --- 3. JOIN AN EXISTING POOL (FINAL FIXED VERSION) ---
+// --- 3. JOIN AN EXISTING POOL ---
 exports.joinPool = async (req, res) => {
   try {
     const poolId = req.params.id;
@@ -99,7 +86,7 @@ exports.joinPool = async (req, res) => {
     if (!pool) {
       return res.status(404).json({ message: 'Pool not found' });
     }
-
+    
     if (pool.members.includes(userId)) {
       return res.status(400).json({ message: 'You are already in this pool' });
     }
@@ -107,27 +94,23 @@ exports.joinPool = async (req, res) => {
     if (pool.members.length >= pool.maxSize) {
       return res.status(400).json({ message: 'This pool is already full' });
     }
+    
+    if (pool.expiresAt && pool.expiresAt < new Date()) {
+        return res.status(400).json({ message: 'The joining window for this pool has closed.' });
+    }
 
-    // Add the user to the pool
     pool.members.push(userId);
-
-    // Give the joiner 5 eco-points
     await User.findByIdAndUpdate(userId, { $inc: { ecoPoints: 5 } });
 
-    // Update status if full
     if (pool.members.length === pool.maxSize) {
       pool.status = 'Full';
     }
 
-    // --- THIS IS THE FIX ---
-    // If the pool is old and doesn't have a poolMode, set a default
     if (!pool.poolMode) {
       pool.poolMode = 'later';
     }
-    // --- END OF FIX ---
 
-    // Save the pool
-    await pool.save(); // This will NOW work
+    await pool.save(); 
     
     const updatedPool = await Pool.findById(poolId)
       .populate('createdBy', 'email')
@@ -136,10 +119,51 @@ exports.joinPool = async (req, res) => {
     res.status(200).json(updatedPool);
 
   } catch (error) {
-    // This is our advanced error logger
     console.error('--- JOIN POOL CRASHED ---');
-    console.error('The "pool.save()" command failed. This is the error:');
-    console.error(error); 
+    console.error('The "pool.save()" command failed. This is the error:', error); 
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// --- 4. FINALIZE POOL & CALCULATE SPLIT COST ---
+exports.finalizePool = async (req, res) => {
+  try {
+    const poolId = req.params.id;
+    const { baseCost } = req.body; 
+
+    const pool = await Pool.findById(poolId);
+
+    if (!pool) {
+      return res.status(404).json({ message: 'Pool not found.' });
+    }
+
+    if (pool.status !== 'Active' && pool.status !== 'Full') {
+      return res.status(400).json({ message: 'Pool is already finalized or expired.' });
+    }
+
+    const memberCount = pool.members.length;
+    
+    if (!baseCost || memberCount === 0) {
+        pool.status = 'Cancelled';
+        await pool.save();
+        return res.status(400).json({ message: 'Cannot finalize pool without a cost or members.' });
+    }
+
+    const splitAmount = baseCost / memberCount;
+
+    pool.baseCost = baseCost;
+    pool.splitCost = splitAmount;
+    pool.status = 'Finalized'; 
+    
+    await pool.save();
+
+    res.status(200).json({ 
+        message: 'Pool finalized and costs calculated!', 
+        pool: pool 
+    });
+
+  } catch (error) {
+    console.error('FINALIZE POOL CRASHED:', error);
+    res.status(500).json({ message: 'Server error during finalization.' });
   }
 };
