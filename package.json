@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "name": "campus-pool",
+  "version": "1.0.0",
+  "description": "this is a repo for electrohack \r problem statement---- Students often book separate rides or food orders to the same destinations/restaurants, leading to extra cost and wastage.",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+  "server": "npm --prefix server run start",
+  "client": "npm --prefix client run dev",
+  "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vedantsingh314-314/electrohack-hawkins.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/vedantsingh314-314/electrohack-hawkins/issues"
+  },
+  "homepage": "https://github.com/vedantsingh314-314/electrohack-hawkins#readme"
+}
