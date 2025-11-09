@@ -1,32 +1,43 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import Login from './pages/login';
-import Dashboard from './pages/dashboard';
-import CreatePool from './pages/createpool';
-import Layout from './components/layout'; // <-- 1. Import Layout
+
+// Pages
+import Login from './pages/Login.jsx';
+import Home from './pages/Home.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import CreatePool from './pages/CreatePool.jsx';
+
+// Layout
+import Layout from './components/Layout.jsx';
 
 function App() {
   return (
     <Routes>
-      {/* 1. The Login route has NO layout */}
+      {/* Public Route */}
       <Route path="/login" element={<Login />} />
 
-      {/* 2. The Dashboard route is WRAPPED in the Layout */}
+      {/* Protected Layout Routes */}
       <Route
         path="/"
         element={
           <Layout>
-            <Dashboard />
+            <Home />
           </Layout>
         }
       />
-
-      {/* 3. The Create Pool route is ALSO wrapped in the Layout */}
       <Route
-        path="/create"
+        path="/create-pool/:type"
         element={
           <Layout>
             <CreatePool />
+          </Layout>
+        }
+      />
+      <Route
+        path="/join-pools/:type"
+        element={
+          <Layout>
+            <Dashboard />
           </Layout>
         }
       />

@@ -38,6 +38,15 @@ const PoolSchema = new mongoose.Schema({
     default: 'Active',
     enum: ['Active', 'Full', 'Expired', 'Cancelled'],
   },
+  expiresAt: {
+    type: Date,
+    default: null, // It's 'null' for "Book Later" pools
+  },
+  poolMode: {
+    type: String,
+    enum: ['now', 'later'],
+    required: true,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Pool', PoolSchema);

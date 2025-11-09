@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // For redirecting after login
-import axios from 'axios'; // For API calls
-import TextInput from '../components/TextInput';
-import Button from '../components/Button';
-import Spinner from '../components/Spinner'; // For loading state
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import TextInput from '../components/TextInput.jsx';
+import Button from '../components/Button.jsx';
+import Spinner from '../components/Spinner.jsx';
 
 const FORM_MODES = {
   LOGIN: 'LOGIN',
   REGISTER: 'REGISTER',
 };
 
-// Get the API URL from our .env file
 const API_URL = import.meta.env.VITE_API_URL;
 
 function Login() {
@@ -19,94 +18,92 @@ function Login() {
     email: '',
     password: '',
   });
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
-    setError(null); // Clear error on new input
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setError(null);
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
-  const isLoginMode = mode === FORM_MODES.LOGIN;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
+    const endpoint = mode === FORM_MODES.LOGIN ? '/api/auth/login' : '/api/auth/register';
     const url = `${API_URL}${endpoint}`;
 
     try {
-      // 1. Send the form data to the backend API
       const response = await axios.post(url, formData);
+      const { token, email, ecoPoints } = response.data || {};
 
-      // 2. If successful, backend sends back a token and user data
-      const { token, email, ecoPoints } = response.data;
+      if (!token) throw new Error('Authentication failed. No token returned.');
 
-      // 3. Store token in localStorage
       localStorage.setItem('campusPoolToken', token);
-
-      // 4. Optionally store user info
       localStorage.setItem('campusPoolUser', JSON.stringify({ email, ecoPoints }));
 
-      // 5. Stop loading and redirect to the homepage
       setLoading(false);
       navigate('/');
     } catch (err) {
       setLoading(false);
-      console.error('LOGIN/REGISTER FAILED:', err);
-      setError(err.response?.data?.message || 'An error occurred. Please try again.');
+      console.error('Auth failed:', err);
+      setError(err.response?.data?.message || err.message || 'An error occurred. Please try again.');
     }
   };
 
+  const isLoginMode = mode === FORM_MODES.LOGIN;
+  const submitDisabled = loading || !formData.email.trim() || !formData.password;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-gray-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-slate-900 rounded-2xl shadow-2xl p-8">
-        <h2 className="text-4xl font-bold text-center text-cyan-400 mb-8">
-          {isLoginMode ? 'Welcome Back!' : 'Join CampusPool'}
+    <div className="min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
+        <h2 className="text-4xl font-bold text-center text-yellow-600 mb-8">
+          {isLoginMode ? 'Welcome Back!' : 'Join CampusRide'}
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <TextInput
             type="email"
             name="email"
             placeholder="Your College Email"
             value={formData.email}
             onChange={handleInputChange}
+            required
+            autoComplete="email"
           />
+
           <TextInput
             type="password"
             name="password"
             placeholder="Password"
             value={formData.password}
             onChange={handleInputChange}
+            required
+            autoComplete={isLoginMode ? 'current-password' : 'new-password'}
           />
 
-          {/* Show error message */}
           {error && (
-            <div className="text-red-400 text-sm font-medium p-3 bg-red-900/20 rounded-lg">
+            <div className="text-red-500 text-sm font-medium p-3 bg-red-100 rounded-lg">
               {error}
             </div>
           )}
 
-          <Button type="submit" fullWidth disabled={loading}>
+          <Button type="submit" fullWidth={true} disabled={submitDisabled}>
             {loading ? <Spinner /> : isLoginMode ? 'Log In' : 'Create Account'}
           </Button>
         </form>
 
         <div className="text-center mt-6">
           <button
-            onClick={() =>
-              setMode(isLoginMode ? FORM_MODES.REGISTER : FORM_MODES.LOGIN)
-            }
-            className="text-cyan-400 hover:text-cyan-300 font-medium transition-all"
+            type="button"
+            onClick={() => {
+              setMode(isLoginMode ? FORM_MODES.REGISTER : FORM_MODES.LOGIN);
+              setError(null);
+            }}
+            className="text-yellow-600 hover:text-yellow-500 font-medium transition-all"
           >
             {isLoginMode
               ? "Don't have an account? Register"

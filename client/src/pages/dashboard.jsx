@@ -1,92 +1,85 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import PoolCard from '../components/PoolCard';
-import Spinner from '../components/Spinner';
+import Button from '../components/Button';
 import { useNavigate } from 'react-router-dom';
 
-// Get the API URL from .env
 const API_URL = import.meta.env.VITE_API_URL;
 
 function Dashboard() {
   const [pools, setPools] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchPools = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // 1. Get auth token
-        const token = localStorage.getItem('campusPoolToken');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-
-        // 2. Set up authorization header
-        const config = {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        };
-
-        // 3. Fetch active pools
-        const response = await axios.get(`${API_URL}/api/pools`, config);
-
-        // 4. Update state
-        setPools(response.data);
-        setLoading(false);
-      } catch (err) {
-        console.error('Failed to fetch pools:', err);
-        setError('Failed to fetch pools. Please try again.');
-        setLoading(false);
+  // ✅ Fetch pools from backend
+  const fetchPools = async () => {
+    try {
+      const token = localStorage.getItem('campusPoolToken');
+      if (!token) {
+        navigate('/login');
+        return;
       }
-    };
 
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const response = await axios.get(`${API_URL}/api/pools`, config);
+
+      // ✅ Ensure pools are valid array
+      const validPools = Array.isArray(response.data)
+        ? response.data.filter((pool) => pool && pool._id)
+        : [];
+
+      setPools(validPools);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching pools:', err);
+      setError('Failed to load pools.');
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchPools();
-  }, [navigate]);
+  }, []);
 
-  // --- Conditional rendering ---
+  // ✅ Called by PoolCard after join (so no reload needed)
+  const handlePoolJoined = () => {
+    fetchPools();
+  };
 
+  // --- RENDER UI ---
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner />
+      <div className="flex justify-center items-center h-screen bg-gray-100">
+        <p className="text-lg font-semibold text-gray-700">Loading pools...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        <p className="text-red-400 text-center">{error}</p>
+      <div className="flex flex-col justify-center items-center h-screen bg-gray-100">
+        <p className="text-red-600 mb-4">{error}</p>
+        <Button onClick={fetchPools}>Retry</Button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-      <div className="mb-6">
-        <h1 className="text-4xl font-bold text-white">Active Pools</h1>
-        <p className="text-lg text-gray-400 mt-1">
-          Find a ride or a food group and save money!
-        </p>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Available Pools</h1>
+        <Button onClick={() => navigate('/create-pool')}>Create New Pool</Button>
       </div>
 
       {pools.length === 0 ? (
-        <div className="bg-slate-800 rounded-lg p-8 text-center">
-          <h3 className="text-2xl font-bold text-white">No Active Pools</h3>
-          <p className="text-gray-400 mt-2">
-            Why not be the first to create one?
-          </p>
+        <div className="text-center text-gray-600 mt-10">
+          <p>No active pools right now. 🚗</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {pools.map((pool) => (
-            <PoolCard key={pool._id} pool={pool} />
+            <PoolCard key={pool._id} pool={pool} onJoin={handlePoolJoined} />
           ))}
         </div>
       )}
