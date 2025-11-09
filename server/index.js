@@ -1,19 +1,30 @@
-// Import the express package
+// --- Import Packages ---
 const express = require('express');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
 
-// Create an instance of express
+// --- Load Environment Variables ---
+dotenv.config();
+
+// --- Initialize Express App ---
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Define a port for our server to run on
-const PORT = 5000;
+// --- Database Connection ---
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log('✅ MongoDB connected! 🍃'))
+  .catch((err) => console.error('❌ MongoDB connection error:', err));
 
-// Create a test route
-// This is what someone sees if they go to "http://localhost:5000/"
+// --- Middleware (optional placeholder) ---
+// app.use(express.json());
+
+// --- Test Route ---
 app.get('/', (req, res) => {
   res.send('Woohoo! The CampusPool API is live! 🚀');
 });
 
-// Start the server and listen for requests
+// --- Start the Server ---
 app.listen(PORT, () => {
-  console.log(`Server is vibing on http://localhost:${PORT}`);
+  console.log(`⚡ Server is vibing on http://localhost:${PORT}`);
 });
