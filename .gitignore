@@ -1,0 +1,11 @@
+# Node.js
+node_modules/
+server/node_modules/
+client/node_modules/
+
+# Environment variables
+.env
+
+# Build folders (for later)
+dist
+.DS_Store
